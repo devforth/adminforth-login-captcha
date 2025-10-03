@@ -3,6 +3,7 @@ import type { AdminForthResource, AdminUser, IAdminForth, IHttpServer, IAdminFor
 import type { PluginOptions } from './types.js';
 
 
+
 export default class CaptchaPlugin extends AdminForthPlugin {
   options: PluginOptions;
 
