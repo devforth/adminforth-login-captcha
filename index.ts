@@ -47,43 +47,31 @@ export default class CaptchaPlugin extends AdminForthPlugin {
 
     const beforeLoginConfirmation = this.adminforth.config.auth.beforeLoginConfirmation;
     const beforeLoginConfirmationArray = Array.isArray(beforeLoginConfirmation) ? beforeLoginConfirmation : [beforeLoginConfirmation];
-    beforeLoginConfirmationArray.push(
+    beforeLoginConfirmationArray.unshift(
       async({ extra }: { adminUser: AdminUser, response: IAdminForthHttpResponse, extra?: any} )=> {
+        const rejectResult = {
+          body:{
+            allowedLogin: false,
+            redirectTo: '/login',
+          },
+          ok: true
+        };
+
         if ( !extra || !extra.cookies ) {
-          return {
-            body:{
-              allowedLogin: false,
-              redirectTo: '/login',
-            },
-            ok: true
-          }
+          return rejectResult;
         }
         const cookies = extra.cookies;
         const token = cookies.find(
           (cookie) => cookie.key === `adminforth_${adapterName}_temporaryJWT`
         )?.value;
         if ( !token ) {
-          return {
-            body:{
-              allowedLogin: false,
-              redirectTo: '/login',
-            },
-            ok: true
-          }
+          return rejectResult;
         }
 
         const ip = this.adminforth.auth.getClientIp(extra.headers);
         const validationResult = await this.options.captchaAdapter.validate(token, ip);
-        console.log('Validation result:', validationResult);
-
         if (!validationResult || !validationResult.success) {
-          return {
-            body:{
-              allowedLogin: false,
-              redirectTo: '/login',
-            },
-            ok: true
-          }
+          return rejectResult;
         }
       }
     );

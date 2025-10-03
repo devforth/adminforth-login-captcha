@@ -1,7 +1,7 @@
 <template>
-
+  <div class="w-full flex justify-center items-center">
     <div :id="props.meta.containerId"></div>
-
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -22,16 +22,16 @@ const props = defineProps<Props>();
 
 const token = ref(null);
 const emit = defineEmits(
-  ["update:allowLoginClick"]
+  ["update:disableLoginButton"]
 )
 
 onMounted(() => {
   const fnName = props.meta.renderWidgetFunctionName;
-  
+  emit("update:disableLoginButton", true);
   const renderFn = (window as any)[fnName];
   if (typeof renderFn === 'function') {
     renderFn(props.meta.containerId, props.meta.siteKey, (receivedToken: string) => {
-      emit("update:allowLoginClick", true);
+      emit("update:disableLoginButton", false);
       token.value = receivedToken;
       setJWT(receivedToken);
     });
