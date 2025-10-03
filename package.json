@@ -1,5 +1,5 @@
 {
-  "name": "login-captcha",
+  "name": "@adminforth/login-captcha",
   "version": "1.0.52",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,9 +13,29 @@
   "description": "",
   "devDependencies": {
     "@types/node": "latest",
+    "semantic-release": "^24.2.1",
+    "semantic-release-slack-bot": "^4.0.2",
     "typescript": "^5.7.3"
   },
   "dependencies": {
     "adminforth": "^2.4.0-next.184"
+  },
+  
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "semantic-release-slack-bot",
+        {
+          "notifyOnSuccess": true,
+          "notifyOnFail": true,
+          "slackIcon": ":package:",
+          "markdownReleaseNotes": true
+        }
+      ]
+    ]
   }
 }
