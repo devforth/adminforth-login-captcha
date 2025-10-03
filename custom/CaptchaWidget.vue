@@ -1,12 +1,15 @@
 <template>
   <div class="w-full flex justify-center items-center">
-    <div :id="props.meta.containerId"></div>
+    <div :id="props.meta.containerId" :data-theme="theme"></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { callAdminForthApi } from '@/utils';
+import { useCoreStore } from '@/stores/core';
+
+const coreStore = useCoreStore();
 
 interface Props {
   meta: {
@@ -24,6 +27,7 @@ const token = ref(null);
 const emit = defineEmits(
   ["update:disableLoginButton"]
 )
+const theme = coreStore.theme;
 
 onMounted(() => {
   const fnName = props.meta.renderWidgetFunctionName;
