@@ -20,7 +20,7 @@
     "semantic-release-slack-bot": "^4.0.2",
     "typescript": "^5.7.3"
   },
-  "dependencies": {
+  "peerDependencies": {
     "adminforth": "^2.4.0-next.184"
   },
   "release": {
