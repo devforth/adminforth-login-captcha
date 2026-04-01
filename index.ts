@@ -33,6 +33,9 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       }
     });
 
+    if (!adminforth.config.customization?.customHeadItems) {
+      adminforth.config.customization.customHeadItems = [];
+    }
     adminforth.config.customization.customHeadItems.push(
       {
         tagName: 'script',
