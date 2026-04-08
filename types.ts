@@ -1,5 +1,5 @@
-import type { CaptchaAdapter } from "adminforth";
+import type { CaptchaAdapter, PluginsCommonOptions } from "adminforth";
 
-export interface PluginOptions {
+export interface PluginOptions extends PluginsCommonOptions {
     captchaAdapter: CaptchaAdapter;
 }
