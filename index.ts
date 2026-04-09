@@ -32,7 +32,7 @@ export default class CaptchaPlugin extends AdminForthPlugin {
         pluginInstanceId: this.pluginInstanceId
       }
     });
-
+ 
     if (!adminforth.config.customization?.customHeadItems) {
       adminforth.config.customization.customHeadItems = [];
     }
