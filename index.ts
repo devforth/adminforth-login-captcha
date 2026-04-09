@@ -15,7 +15,7 @@ export default class CaptchaPlugin extends AdminForthPlugin {
     if (!adminforth.config.customization?.loginPageInjections) {
       adminforth.config.customization = {
         ...adminforth.config.customization,
-        loginPageInjections: { underInputs: [], panelHeader: [] }
+        loginPageInjections: { underInputs: [], underLoginButton: [], panelHeader: [] }
       };
     };
 
