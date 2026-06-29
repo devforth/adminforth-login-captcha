@@ -94,6 +94,10 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       handler: async ({ body, response }) => {
         const { token } = body;
 
+        if (!token) {
+          return { ok: false, error: 'Token is required' };
+        }
+
         const adapter = this.options.captchaAdapter;
         const adapterName = adapter.constructor.name;    
 
