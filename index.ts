@@ -19,13 +19,16 @@ export default class CaptchaPlugin extends AdminForthPlugin {
     schema: z.ZodType<T>,
     body: unknown,
     response: { setStatus: (code: number, message: string) => void },
-  ): T | null {
+  ): { ok: true; data: T } | { ok: false; error: { error: string; details: unknown } } {
     const parsed = schema.safeParse(body ?? {});
     if (!parsed.success) {
-      response.setStatus(422, parsed.error.message);
-      return null;
+      response.setStatus(400, '');
+      return {
+        ok: false,
+        error: { error: 'Request body validation failed', details: parsed.error.issues },
+      };
     }
-    return parsed.data;
+    return { ok: true, data: parsed.data };
   }
 
   async modifyResourceConfig(adminforth: IAdminForth, resourceConfig: AdminForthResource) {
@@ -110,8 +113,9 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       path: `/plugin/${this.pluginInstanceId}/setToken`,
       noAuth: true,
       handler: async ({ body, response }) => {
-        const data = this.parseBody(setTokenBodySchema, body, response);
-        if (!data) return;
+        const parsed = this.parseBody(setTokenBodySchema, body, response);
+        if ('error' in parsed) return parsed.error;
+        const data = parsed.data;
         const { token } = data;
 
         if (!token) {
