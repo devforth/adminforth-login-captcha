@@ -1,4 +1,4 @@
-import { AdminForthPlugin } from "adminforth";
+import { AdminForthPlugin, parseBody } from "adminforth";
 import type { AdminForthResource, AdminUser, IAdminForth, IHttpServer, IAdminForthHttpResponse } from "adminforth";
 import type { PluginOptions } from './types.js';
 import { z } from "zod";
@@ -13,22 +13,6 @@ export default class CaptchaPlugin extends AdminForthPlugin {
   constructor(options: PluginOptions) {
     super(options, import.meta.url);
     this.options = options;
-  }
-
-  private parseBody<T>(
-    schema: z.ZodType<T>,
-    body: unknown,
-    response: { setStatus: (code: number, message: string) => void },
-  ): { ok: true; data: T } | { ok: false; error: { error: string; details: unknown } } {
-    const parsed = schema.safeParse(body ?? {});
-    if (!parsed.success) {
-      response.setStatus(400, '');
-      return {
-        ok: false,
-        error: { error: 'Request body validation failed', details: parsed.error.issues },
-      };
-    }
-    return { ok: true, data: parsed.data };
   }
 
   async modifyResourceConfig(adminforth: IAdminForth, resourceConfig: AdminForthResource) {
@@ -113,7 +97,7 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       path: `/plugin/${this.pluginInstanceId}/setToken`,
       noAuth: true,
       handler: async ({ body, response }) => {
-        const parsed = this.parseBody(setTokenBodySchema, body, response);
+        const parsed = parseBody(setTokenBodySchema, body, response);
         if ('error' in parsed) return parsed.error;
         const data = parsed.data;
         const { token } = data;
