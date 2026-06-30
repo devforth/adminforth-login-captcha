@@ -15,6 +15,9 @@
   "author": "DevForth (https://devforth.io)",
   "license": "MIT",
   "description": "",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
   "devDependencies": {
     "@types/node": "latest",
     "adminforth": "^3.6.21",

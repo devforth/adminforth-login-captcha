@@ -1,6 +1,11 @@
 import { AdminForthPlugin } from "adminforth";
 import type { AdminForthResource, AdminUser, IAdminForth, IHttpServer, IAdminForthHttpResponse } from "adminforth";
 import type { PluginOptions } from './types.js';
+import { z } from "zod";
+
+const setTokenBodySchema = z.object({
+  token: z.string(),
+}).strict();
 
 export default class CaptchaPlugin extends AdminForthPlugin {
   options: PluginOptions;
@@ -8,6 +13,19 @@ export default class CaptchaPlugin extends AdminForthPlugin {
   constructor(options: PluginOptions) {
     super(options, import.meta.url);
     this.options = options;
+  }
+
+  private parseBody<T>(
+    schema: z.ZodType<T>,
+    body: unknown,
+    response: { setStatus: (code: number, message: string) => void },
+  ): T | null {
+    const parsed = schema.safeParse(body ?? {});
+    if (!parsed.success) {
+      response.setStatus(422, parsed.error.message);
+      return null;
+    }
+    return parsed.data;
   }
 
   async modifyResourceConfig(adminforth: IAdminForth, resourceConfig: AdminForthResource) {
@@ -92,7 +110,9 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       path: `/plugin/${this.pluginInstanceId}/setToken`,
       noAuth: true,
       handler: async ({ body, response }) => {
-        const { token } = body;
+        const data = this.parseBody(setTokenBodySchema, body, response);
+        if (!data) return;
+        const { token } = data;
 
         if (!token) {
           return { ok: false, error: 'Token is required' };
