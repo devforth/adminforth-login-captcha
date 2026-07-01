@@ -1,4 +1,4 @@
-import { AdminForthPlugin, parseBody } from "adminforth";
+import { AdminForthPlugin } from "adminforth";
 import type { AdminForthResource, AdminUser, IAdminForth, IHttpServer, IAdminForthHttpResponse } from "adminforth";
 import type { PluginOptions } from './types.js';
 import { z } from "zod";
@@ -96,10 +96,9 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       method: 'POST',
       path: `/plugin/${this.pluginInstanceId}/setToken`,
       noAuth: true,
+      request_schema: setTokenBodySchema,
       handler: async ({ body, response }) => {
-        const parsed = parseBody(setTokenBodySchema, body, response);
-        if ('error' in parsed) return parsed.error;
-        const data = parsed.data;
+        const data = body as z.infer<typeof setTokenBodySchema>;
         const { token } = data;
 
         if (!token) {
