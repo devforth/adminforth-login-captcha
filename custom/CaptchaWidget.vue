@@ -1,6 +1,6 @@
 <template>
   <div class="w-full flex justify-center items-center">
-    <div :id="props.meta.containerId" :data-theme="theme"></div>
+    <div class="w-full" :id="props.meta.containerId" :data-theme="theme"></div>
   </div>
 </template>
 
