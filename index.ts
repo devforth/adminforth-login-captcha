@@ -3,6 +3,9 @@ import type { AdminForthResource, AdminUser, IAdminForth, IHttpServer, IAdminFor
 import type { PluginOptions } from './types.js';
 import { z } from "zod";
 
+const DEFAULT_TOKEN_TTL_SECONDS = 300;
+const KV_COLLECTION = 'adminforth_login_captcha';
+
 const setTokenBodySchema = z.object({
   token: z.string(),
 }).strict();
@@ -76,10 +79,26 @@ export default class CaptchaPlugin extends AdminForthPlugin {
           return rejectResult;
         }
 
+        // Reject tokens that were already consumed by a previous successful login. Captcha tokens
+        // stay valid at the provider for a short window, so without this check the same token could
+        // be replayed multiple times.
+        if (this.options.keyValueAdapter) {
+          const alreadyUsed = await this.options.keyValueAdapter.get(token, KV_COLLECTION);
+          if (alreadyUsed) {
+            return rejectResult;
+          }
+        }
+
         const ip = this.adminforth.auth.getClientIp(extra.headers);
         const validationResult = await this.options.captchaAdapter.validate(token, ip);
         if (!validationResult || !validationResult.success) {
           return rejectResult;
+        }
+
+        // Mark the token as used so it cannot be replayed while it is still valid at the provider.
+        if (this.options.keyValueAdapter) {
+          const ttlSeconds = this.options.tokenTimeToLiveSeconds ?? DEFAULT_TOKEN_TTL_SECONDS;
+          await this.options.keyValueAdapter.set(token, 'used', ttlSeconds, KV_COLLECTION);
         }
       }
     );
@@ -106,7 +125,7 @@ export default class CaptchaPlugin extends AdminForthPlugin {
         }
 
         const adapter = this.options.captchaAdapter;
-        const adapterName = adapter.constructor.name;    
+        const adapterName = adapter.constructor.name;
 
         response.setHeader('Set-Cookie', `adminforth_${adapterName}_temporaryJWT=${token}; Path=${this.adminforth.config.baseUrl || '/'}; HttpOnly; SameSite=Strict; max-age=300; `);
         return { ok: true };
