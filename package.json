@@ -5,6 +5,10 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "homepage": "https://adminforth.dev/docs/tutorial/Plugins/login-captcha/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devforth/adminforth-login-captcha.git"
+  },
   "publishConfig": {
     "access": "public"
   },
