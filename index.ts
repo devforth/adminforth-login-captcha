@@ -59,7 +59,7 @@ export default class CaptchaPlugin extends AdminForthPlugin {
     const beforeLoginConfirmation = this.adminforth.config.auth.beforeLoginConfirmation;
     const beforeLoginConfirmationArray = Array.isArray(beforeLoginConfirmation) ? beforeLoginConfirmation : [beforeLoginConfirmation];
     beforeLoginConfirmationArray.unshift(
-      async({ extra }: { adminUser: AdminUser, response: IAdminForthHttpResponse, extra?: any} )=> {
+      async({ response, extra }: { adminUser: AdminUser, response: IAdminForthHttpResponse, extra?: any} )=> {
         const rejectResult = {
           body:{
             allowedLogin: false,
@@ -67,16 +67,22 @@ export default class CaptchaPlugin extends AdminForthPlugin {
           },
           ok: true
         };
-
-        if ( !extra || !extra.cookies ) {
+        const setResponseError = (response: IAdminForthHttpResponse) => {
+          response.setStatus(401);
+        };
+        const returnRejectResult = () => {
+          setResponseError(response);
           return rejectResult;
+        }
+        if ( !extra || !extra.cookies ) {
+          return returnRejectResult();
         }
         const cookies = extra.cookies;
         const token = cookies.find(
           (cookie) => cookie.key === `adminforth_${adapterName}_temporaryJWT`
         )?.value;
         if ( !token ) {
-          return rejectResult;
+          return returnRejectResult();
         }
 
         // Reject tokens that were already consumed by a previous successful login. Captcha tokens
@@ -85,14 +91,14 @@ export default class CaptchaPlugin extends AdminForthPlugin {
         if (this.options.keyValueAdapter) {
           const alreadyUsed = await this.options.keyValueAdapter.get(token, KV_COLLECTION);
           if (alreadyUsed) {
-            return rejectResult;
+            return returnRejectResult();
           }
         }
 
         const ip = this.adminforth.auth.getClientIp(extra.headers);
         const validationResult = await this.options.captchaAdapter.validate(token, ip);
         if (!validationResult || !validationResult.success) {
-          return rejectResult;
+          return returnRejectResult();
         }
 
         // Mark the token as used so it cannot be replayed while it is still valid at the provider.
