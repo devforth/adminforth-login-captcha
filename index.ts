@@ -1,5 +1,5 @@
 import { AdminForthPlugin } from "adminforth";
-import type { AdminForthResource, AdminUser, IAdminForth, IHttpServer, IAdminForthHttpResponse } from "adminforth";
+import type { AdminForthResource, BeforeLoginAttemptFunction, IAdminForth, IHttpServer } from "adminforth";
 import type { PluginOptions } from './types.js';
 import { z } from "zod";
 
@@ -56,56 +56,46 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       }
     );
 
-    const beforeLoginConfirmation = this.adminforth.config.auth.beforeLoginConfirmation;
-    const beforeLoginConfirmationArray = Array.isArray(beforeLoginConfirmation) ? beforeLoginConfirmation : [beforeLoginConfirmation];
-    beforeLoginConfirmationArray.unshift(
-      async({ response, extra }: { adminUser: AdminUser, response: IAdminForthHttpResponse, extra?: any} )=> {
-        const rejectResult = {
-          body:{
-            allowedLogin: false,
-            redirectTo: '/login',
-          },
-          ok: true
-        };
-        const setResponseError = (response: IAdminForthHttpResponse) => {
-          response.setStatus(401);
-        };
-        const returnRejectResult = () => {
-          setResponseError(response);
-          return rejectResult;
-        }
-        if ( !extra || !extra.cookies ) {
-          return returnRejectResult();
-        }
-        const cookies = extra.cookies;
-        const token = cookies.find(
+    const beforeLoginAttempt = this.adminforth.config.auth.beforeLoginAttempt as BeforeLoginAttemptFunction[];
+    if (!beforeLoginAttempt) {
+      throw new Error('Captcha plugin requires AdminForth which supports auth.beforeLoginAttempt hook, please update adminforth package');
+    }
+    // captcha is checked before credentials are looked up in database, so login attempt without
+    // solved captcha is rejected in the same way for any username and password
+    beforeLoginAttempt.unshift(
+      async ({ extra, tr }) => {
+        const reject = async () => ({ ok: false, error: await tr('Captcha verification failed', 'errors') });
+
+        const token = extra.cookies.find(
           (cookie) => cookie.key === `adminforth_${adapterName}_temporaryJWT`
         )?.value;
-        if ( !token ) {
-          return returnRejectResult();
+        if (!token) {
+          return reject();
         }
 
-        // Reject tokens that were already consumed by a previous successful login. Captcha tokens
+        // Reject tokens which were already spent by a previous login attempt. Captcha tokens
         // stay valid at the provider for a short window, so without this check the same token could
         // be replayed multiple times.
         if (this.options.keyValueAdapter) {
           const alreadyUsed = await this.options.keyValueAdapter.get(token, KV_COLLECTION);
           if (alreadyUsed) {
-            return returnRejectResult();
+            return reject();
           }
         }
 
         const ip = this.adminforth.auth.getClientIp(extra.headers);
         const validationResult = await this.options.captchaAdapter.validate(token, ip);
         if (!validationResult || !validationResult.success) {
-          return returnRejectResult();
+          return reject();
         }
 
-        // Mark the token as used so it cannot be replayed while it is still valid at the provider.
+        // Mark the token as spent, so one solved captcha allows exactly one login attempt.
         if (this.options.keyValueAdapter) {
           const ttlSeconds = this.options.tokenTimeToLiveSeconds ?? DEFAULT_TOKEN_TTL_SECONDS;
           await this.options.keyValueAdapter.set(token, 'used', ttlSeconds, KV_COLLECTION);
         }
+
+        return { ok: true };
       }
     );
   }
