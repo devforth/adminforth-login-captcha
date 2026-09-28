@@ -6,7 +6,6 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { callAdminForthApi } from '@/utils';
 import { useCoreStore } from '@/stores/core';
 
 const coreStore = useCoreStore();
@@ -15,9 +14,7 @@ interface Props {
   meta: {
     renderWidgetFunctionName: string;
     containerId: string;
-    adapterName: string;
     siteKey: string;
-    pluginInstanceId: string;
   };
   /**
    * Incremented by login page on every rejected login attempt.
@@ -28,10 +25,10 @@ interface Props {
 const props = defineProps<Props>();
 
 const widgetHost = ref<HTMLElement | null>(null);
-const token = ref(null);
-const emit = defineEmits(
-  ["update:disableLoginButton"]
-)
+const emit = defineEmits<{
+  (event: 'update:disableLoginButton', value: boolean): void;
+  (event: 'update:setLoginParam', name: string, value: string | undefined): void;
+}>();
 const theme = coreStore.theme;
 
 onMounted(() => {
@@ -60,26 +57,14 @@ function renderWidget() {
   container.dataset.theme = theme;
   widgetHost.value.appendChild(container);
 
-  emit("update:disableLoginButton", true);
-  renderFn(props.meta.containerId, props.meta.siteKey, (receivedToken: string) => {
-    emit("update:disableLoginButton", false);
-    token.value = receivedToken;
-    setJWT(receivedToken);
-  });
+  setToken(undefined);
+  renderFn(props.meta.containerId, props.meta.siteKey, setToken, () => setToken(undefined));
 }
 
-async function setJWT(token: string) {
-  try {
-    const res = await callAdminForthApi({
-      path: `/plugin/${props.meta.pluginInstanceId}/setToken`,
-      method: 'POST',
-      body: {
-        token,
-      },
-    });
-  } catch (error) {
-    console.error('Failed to validate token:', error);
-  }
+// token is sent with the /login request, so login is allowed only while there is an unexpired one
+function setToken(token: string | undefined) {
+  emit('update:setLoginParam', 'captchaToken', token);
+  emit('update:disableLoginButton', !token);
 }
 
 </script>

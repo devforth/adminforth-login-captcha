@@ -1,14 +1,9 @@
 import { AdminForthPlugin } from "adminforth";
-import type { AdminForthResource, BeforeLoginAttemptFunction, IAdminForth, IHttpServer } from "adminforth";
+import type { AdminForthResource, BeforeLoginAttemptFunction, IAdminForth } from "adminforth";
 import type { PluginOptions } from './types.js';
-import { z } from "zod";
 
 const DEFAULT_TOKEN_TTL_SECONDS = 300;
 const KV_COLLECTION = 'adminforth_login_captcha';
-
-const setTokenBodySchema = z.object({
-  token: z.string(),
-}).strict();
 
 export default class CaptchaPlugin extends AdminForthPlugin {
   options: PluginOptions;
@@ -27,17 +22,12 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       };
     };
 
-    const adapter = this.options.captchaAdapter;
-    const adapterName = adapter.constructor.name;    
-
     adminforth.config.customization.loginPageInjections.underInputs.push({
       file: this.componentPath('CaptchaWidget.vue'),
       meta: {
         containerId: this.options.captchaAdapter.getWidgetId(),
-        adapterName: adapterName,
         renderWidgetFunctionName: this.options.captchaAdapter.getRenderWidgetFunctionName(),
         siteKey: this.options.captchaAdapter.getSiteKey(),
-        pluginInstanceId: this.pluginInstanceId
       }
     });
  
@@ -66,10 +56,9 @@ export default class CaptchaPlugin extends AdminForthPlugin {
       async ({ extra, tr }) => {
         const reject = async () => ({ ok: false, error: await tr('Captcha verification failed', 'errors') });
 
-        const token = extra.cookies.find(
-          (cookie) => cookie.key === `adminforth_${adapterName}_temporaryJWT`
-        )?.value;
-        if (!token) {
+        // CaptchaWidget.vue adds the solved token to the /login request body
+        const token = extra.body.captchaToken;
+        if (typeof token !== 'string') {
           return reject();
         }
 
@@ -104,28 +93,5 @@ export default class CaptchaPlugin extends AdminForthPlugin {
     const adapter = this.options.captchaAdapter;
     const adapterName = adapter.constructor.name;  
     return `CaptchaPlugin-${adapterName}-${this.options.captchaAdapter.getSiteKey()}`;
-  }
-
-  setupEndpoints(server: IHttpServer) {
-    server.endpoint({
-      method: 'POST',
-      path: `/plugin/${this.pluginInstanceId}/setToken`,
-      noAuth: true,
-      request_schema: setTokenBodySchema,
-      handler: async ({ body, response }) => {
-        const data = body as z.infer<typeof setTokenBodySchema>;
-        const { token } = data;
-
-        if (!token) {
-          return { ok: false, error: 'Token is required' };
-        }
-
-        const adapter = this.options.captchaAdapter;
-        const adapterName = adapter.constructor.name;
-
-        response.setHeader('Set-Cookie', `adminforth_${adapterName}_temporaryJWT=${token}; Path=${this.adminforth.config.baseUrl || '/'}; HttpOnly; SameSite=Strict; max-age=300; `);
-        return { ok: true };
-      }
-    });
   }
 }
