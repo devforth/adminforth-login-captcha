@@ -90,8 +90,6 @@ export default class CaptchaPlugin extends AdminForthPlugin {
   }
 
   instanceUniqueRepresentation(pluginOptions: any) : string {
-    const adapter = this.options.captchaAdapter;
-    const adapterName = adapter.constructor.name;  
-    return `CaptchaPlugin-${adapterName}-${this.options.captchaAdapter.getSiteKey()}`;
+    return this.options.captchaAdapter.constructor.name;
   }
 }
